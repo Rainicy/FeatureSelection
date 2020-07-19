@@ -1,0 +1,43 @@
+\section{Appendix}
+
+\subsection{Strong Rule for Feature Selection}\label{appendix:feature_selection}
+
+To better understand the strong rule for feature selection (Eq \ref{eq:strongrule}), we start with a few simple assumptions of the given feature matrix $\pmb{X}$:
+\begin{itemize}
+    \item feature values are always non-negative, e.g. $x_{ij} \geq 0 \; \forall i\in[n], \forall j\in[d]$
+    \item feature values are given as binary values: e.g. $x_{ij} \in \{0, 1\} \; \forall i\in[n], \forall j\in[d]$
+    \item scale each feature column to unit length, e.g. $\sum_{i=1}^n \hat{x}_{ij} = 1\; \forall j \in [d]$
+\end{itemize}
+
+After the setup, we have a new feature column $\hat{\pmb{x}}_{j}$, and for any non-zero feature value $\hat{x}_{ij} = \frac{1}{|\pmb{x}_j|}$, wherein $|\pmb{x}_j|$ is the number of non-zero feature values for $j$-th feature. With the new transformed feature columns $\hat{\pmb{x}}_j$, the strong rule will be written as:
+\begin{align}
+    s_j = |\hat{\pmb{x}}_j^T (\pmb{y} - \pmb{\bar{p}})| < \epsilon
+    \label{appendix_eq:strongrule}
+\end{align}
+
+We further divide features into three different groups:
+\begin{itemize}
+     \item $j$-th feature only appears in positive instances, e.g. $\hat{\pmb{x}}_j$: $ j \in \mathbb{P}$,
+    \item $j$-th feature only appears in negative instances, e.g. $\hat{\pmb{x}}_j$: $ j \in \mathbb{N}$,
+    \item $j$-th feature appears in both negative instances, e.g. $\hat{\pmb{x}}_j$: $ j \in \mathbb{B}$,
+\end{itemize}
+
+Based on different groups, a feature priority score can be derived:
+$$s_j = 
+    \left\{ 
+    \begin{aligned}
+        & 1 - \bar{p}  & \forall j \in \mathbb{P} \\
+        & \bar{p} & \forall j \in \mathbb{N} \\
+        & \left|\frac{|\pmb{x}_j|_{\mathbb{P}}}{|\pmb{x}_j|} - \bar{p}\right| & \forall j \in \mathbb{B} 
+    \end{aligned}
+    \right.
+$$
+wherein $|\pmb{x}_j|_{\mathbb{P}}$ indicates the number positive instances that contains $j$-th feature. Given that $\bar{p} \in (0, 1)$ and a balanced data, e.g. $\bar{p} = 0.5$, the priority scores for features from different groups will satisfy the following relationship: 
+\begin{align}
+    s_{j:j\in \mathbb{B}} \leq s_{j:j\in \mathbb{N}}  = s_{j:j\in \mathbb{P}} \label{appendix_eq:relation}
+\end{align}
+
+Furthermore, a feature that is distributed evenly in positive and negative instances, e.g. $\frac{|\pmb{x}_j|_{\mathbb{P}}}{|\pmb{x}_j|} = 0.5$, then its priority score will be closed to $0$, which means it will not help for predicting the class. Such kind of features are often from stop words. On the other hand, a feature that only occurs in positive or negative examples, it has the largest priority score. For a general case, the more skewed the feature, the higher prior score the feature will be. 
+
+\subsection{Strong Rule for Instance Selection}\label{appendix:instance_selection}
+We have studied the strong rule for how to decide the importance of a feature. In this section, we will try to understand the strong rule for how to select instances (Eq \ref{eq:strong_rule_instance}).

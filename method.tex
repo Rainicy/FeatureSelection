@@ -1,0 +1,69 @@
+\section{Method}
+\subsection{Feature Selection}
+Strong rules have been used for discarding less important features in a lasso related regression or classification problems\cite{tibshirani2012strong,ghaoui2010safe}. In \cite{tibshirani2012strong}, authors considered strong rule for binary logistic regression problem ($y \in \{0, 1\}$, $\pmb{x} \in \R^{d}$, wherein $d$ is the feature dimension):
+
+\begin{align}
+    p(y=1 | \pmb{x}; \w) = \frac{1}{1 + \exp(-\pmb{x}^T\w)}
+\end{align}
+
+For simplicity purposes, we write $p_i = p(y_i | x_i; \pmb{w})$. Based on Regularized Empirical Risk Minimization, we are seeking an optimal solution of $\hat{\pmb{w}}$ that minimizes the negative log-likelihood on the given training dataset $D=  \{\pmb{y}, \pmb{X}\} = \{(y_i, \pmb{x}_i)\}_{i=1}^{n}$ with $n$ as the number of data,
+
+\begin{align}
+    &\hat{\w} = \arg \min_{\w\in \R^{d}} \sum_{i=1}^n {\phi_i(\pmb{x}_i^T\pmb{w}) + \lambda g(\pmb{w})} \text{ wherein} \label{eq:loss} \\
+    &\phi(\pmb{x}_i^T\w) = y_i \log p_i + (1-y_i) \log (1-p_i) \text{ and } \\
+    &g(\w) = ||\w||_1
+    % \hat{\w} &= \arg\min_{\w\in \R^{d}} - \sum_{i=1}^n \left( y_i \log p_i + (1-y_i) \log (1-p_i) \right) + \lambda ||\w||_1  
+\end{align}
+
+$\lambda$ is a hyper-parameter for the lasso penalty. With a large value of $\lambda$, the optimal solution $\w$ may yield to a sparse vector, especially when the number of features $d$ is large. Now suppose the sparse solution is given in advance: a subset of non-zero predictors $S \in \{1,2,\dots,n\}$ and the complement of $S$ set is $S'$, which has $\hat{\w}_{j: j \in S} \neq 0$ and $\hat{\w}_{j: j \in S'} = 0$. In this case, we could first discard the features in $S'$, and then apply an optimization method to solve (\ref{eq:loss}) using features in $S$ only. The feature selection may not just reduce computational time and memory, especially for coordinated descent based optimizer \cite{friedman2010regularization}, but also prevents the over-fitting. 
+
+In \cite{tibshirani2012strong}, authors proposed a general \textit{strong rule} for discarding features in the lasso-type loss function. For the binary logistic regression, we define a score $s_j$ for discarding the $j$-th feature via the \textit{strong rule}:
+
+\begin{align}
+    s_j = |\pmb{x}_j^T (\pmb{y} - \pmb{\bar{p}})| < \epsilon
+    \label{eq:strongrule}
+\end{align}
+
+where $\pmb{x}_j$ is the $j$-th feature column, $\pmb{\bar{p}} = \pmb{1} \frac{\sum_{i=1}^n y_i}{n}$ is a vector of the prior probability of positive instances, and a non-negative $\epsilon$ is a threshold for filtering out features and it is related to the strength of lasso penalty $\lambda$. From (\ref{eq:strongrule}), the strong rule produces the priority scores for all features by looking at the inner product of each feature with the residuals. Given that $\bar{\pmb{p}} \in (0,1)$, it is not hard to notice that residuals for positive instance are always positive, and are always negative for negative instances. Furthermore, if assuming that the features are positive, binary and scaled to unit length ($\sum_{i=1}^{n} \pmb{x}_{ij} = 1 $ for all $j$, and any two non-zero feature values in $j$-th column equal to each other), it can be verified that \textit{unique features}, who appear either only in positive instances or only in negative instances, have larger priority scores than the features appearing in both positive and negative instances under some assumption (see Appendix \ref{appendix:feature_selection}). The lowest priority will happen to a feature that is distributed evenly in positive and negative instances (\textit{common feature}), e.g. stop words in a text classification problem. 
+
+The strong rule can be easily applied to remove inactive features, i.e. more common features, but it may mistakenly discard some active features. To reduce the chances of making mistakes, one way is to keep a larger portion of features in the model to prevent discarding more active features, or to combine with KKT (Karush-Kuhn-Tucker) conditions to ensure that there is no active feature being discarded\cite{tibshirani2012strong}. In this paper, we will address this erroneous issue by an unaggressive strong rule: using a larger threshold $\epsilon$ to save a larger portion of features in the model for training. 
+
+In practice, many optimizers, especially for coordinate coordinate descent and ascent methods\cite{friedman2010regularization}, take full advantage of feature selection, to reduce the computational cost in training time and memory. On the other hand, feature selection may also prevent over-fitting by limiting the model complexity\cite{reunanen2003overfitting}. 
+
+\subsection{Instance Selection}
+
+In addition to a large number of features, an extremely large instances collection becomes another common issue in Internet industries, accompanied with the increasing business scale / scope and data accumulation. For example, in some extreme multi-label classification\cite{wang2019ranking} (assigning multiple labels to each instance), one will deal with hundred thousand to millions training examples, e.g. Amazon Product category dataset\cite{mcauley2013hidden} contains 1.1 million training examples and 200 thousand features. For such extreme data, most of the methods suffer from complexity growing linearly with number of data, which is usually intractable. Thus, additional speedup for handling such large scale data is often required, e.g. instance selection.
+
+In this paper, we seek an instance selection method based on \textit{strong rule}. To introduce the method, we start with a novel primal-dual coordinate optimizer (e.g. Quartz\cite{qu2015quartz}), which considers primal-dual pair structure of feature and instance, and defines the relation between them. The corresponding Fenchel dual problem for (\ref{eq:loss}) can be defined as following by introducing convex conjugate functions $g^\ast: \R^d \to \R$ of $g$  and $\phi_i^\ast : \R \to \R$ of $\phi_i$ for $i \in [n]$. (Note that the function $f^{\ast}: \R^d \to \R$ conjugate to a function $f: \R^d \to \R$ is defined as $f^\ast(\pmb{y}) = \max_{\pmb{x}\in \R^d} \pmb{x}^T \pmb{y} - f(\pmb{x})$)
+\begin{align}
+\max_{\pmb{\alpha} \in \R^n} \left[ D(\pmb{\alpha}) = -f(\pmb{\alpha}) - \psi(\al) \right] \label{eq:dual_loss}
+\end{align}
+
+where $\al \in \R^n$ is the dual variables vector and functions $f$ and $\psi$ are defined by
+\begin{align}
+f(\alpha) &= \lambda g^\ast \left( \frac{1}{\lambda n} \sum_{i=1}^n \pmb{x}_i^T  \alpha_i\right) \label{eq:conjugate_g} \\
+\psi(\alpha) &= \frac{1}{n} \sum_{i=1}^{n} \phi_i^\ast (- \alpha_i) \label{eq:conjugate_phi}
+\end{align}
+
+
+In the Regularized Empirical Risk Minimization problem, we often solve the primal optimization problem in Eq (\ref{eq:loss}). Alternatively, instead of minimizing the loss function to find the optimal primal variables $\hat{\w}$, a primal-dual coordinate method maximizes the dual form (Eq (\ref{eq:dual_loss})) of the loss function via a set of dual variables $\pmb{\alpha} \in \R^{n}$. When the solution is optimized, the gap between the primal form and dual form is zero, which leads to the following relationship between primal and dual variables. \cite{yen2016pd,qu2015quartz}:
+\begin{align}
+    \hat{\w} &= \frac{1}{\lambda n} \sum_{i=1}^{n} \pmb{x}_i^T \alpha_i
+\end{align}
+
+According to Eq (\ref{eq:strongrule}), if a score $s_j < \epsilon$, the j-th feature could be discarded by the strong rule, namely, $\hat{w}_j = 0$ (i.e. $j\in S'$) in the optimal solution; on the contrary, if a score $s_j \geq \epsilon$, it is possible that $\hat{w}_j$ not equals to 0 (i.e. $j\in S$). To simplify the formula, we discard the factor $\frac{1}{\lambda n}$, shown as below.
+
+\begin{align}
+\hat{w}_j &= \langle \pmb{x}_{j}, \al \rangle = \nu \;\;\; \forall j \in S \nonumber \\
+\hat{w}_j &= \langle \pmb{x}_{j}, \al \rangle = 0 \;\;\; \forall j \in S' \label{eq:strong_rule_2}
+\end{align}
+wherein $\nu$ is a real value other than 0. Eq (\ref{eq:strong_rule_2}) tells that if the j-th feature can be removed, the dot product value between feature column $\pmb{x}_j$ and dual variables vector $\al$ is 0, otherwise is not necessary to be 0. 
+
+Furthermore, consider $\al$ as an unknown variables for being solved, and create a dataset $D^T = \{\pmb{z}, \pmb{X}^T\} = \{(z_j, \pmb{x}_j)\}_{j=1}^d$: $\pmb{z} \in \R^d, \pmb{x}_j \in \R^d $, wherein $\pmb{x}_j$ is the feature $j$ column vector and $z_j = 0$ if $j \in S'$, otherwise $z_j=v$ if $j \in S$ by the strong rule in the feature selection.  To solve the $\al$, we could consider to build another logistic regression on the given data $D^T$, wherein the input data instance is each feature column vector with its target $z_j$ indicating whether j-th feature will be removed ($z_j=0$) or not($z_j=v$).
+
+Following Eq (\ref{eq:strongrule}) and applying the general strong rule for discarding instances, we define a score $\beta_i$ for discarding the $i-th$ instance via the strong rule:
+\begin{align}
+    \beta_i &= |\pmb{x}_i^T (\pmb{z} - \bar{\pmb{q}})| \leq \eta \label{eq:strong_rule_instance}
+\end{align}
+
+wherein $\pmb{x}_i$ is the $i$-th feature row, $\bar{\pmb{q}} = \pmb{1}\frac{\sum_{j=1}^d z_j}{d}$ is a vector of the prior probability of features not being discarded by strong rule in Eq (\ref{eq:strongrule}) and a non-negative $\eta$ is a threshold for filtering out instances: a larger $\eta$ indicates that more instances will be dropped. This instance selection rule will produce the priority scores for all instances by checking at the inner product of each instance with its residuals. 
